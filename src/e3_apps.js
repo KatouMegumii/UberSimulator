@@ -167,6 +167,10 @@ function act(a,arg){
     case 'start':startGame();break;
     case 'dlg':chooseDlg(+arg);break;
     case 'noop':return;
+    case 'law':lawAct(arg);return;
+    case 'ev':evAct(arg);return;
+    case 'mq0':applyQuality(arg);document.querySelectorAll('[data-act=mq0]').forEach(e=>e.classList.toggle('on',e.dataset.arg===arg));return;
+    case 'mtab':case 'mclose':case 'mq':case 'mpost':case 'mcock':case 'mvoice':menuAct(a,arg);return;
   }
   renderPhone(true);
 }

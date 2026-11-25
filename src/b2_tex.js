@@ -13,6 +13,7 @@ const asphaltH=canvasOf(512,512,(g,w,h)=>{g.drawImage(asphaltC,0,0,w,h);});
 const asphaltN=normalFromHeight(asphaltH,3);asphaltN.repeat.copy(asphaltTex.repeat);
 const asphaltR=texFromCanvas(canvasOf(256,256,(g,w,h)=>{g.fillStyle='rgb(0,225,0)';g.fillRect(0,0,w,h);for(let k=0;k<3000;k++){g.fillStyle=`rgba(0,${rand(140,255)|0},0,.6)`;g.fillRect(rand(0,w),rand(0,h),3,3);}}),true,false);asphaltR.repeat.copy(asphaltTex.repeat);
 const roadMat=new THREE.MeshStandardMaterial({map:asphaltTex,normalMap:asphaltN,normalScale:new THREE.Vector2(.6,.6),roughnessMap:asphaltR,roughness:1,metalness:0});
+const ROAD_PHOTO=applyPbr(roadMat,'road',2400/3.5);
 // --- 人行道地砖 ---
 const paveC=canvasOf(512,512,(g,w,h)=>{const n=8,s=w/n;for(let y=0;y<n;y++)for(let x=0;x<n;x++){const v=rand(118,150);g.fillStyle=`rgb(${v},${v-4},${v-10})`;g.fillRect(x*s,y*s,s,s);noise(g,0,0,0,0);
   for(let k=0;k<160;k++){g.fillStyle=`rgba(${Math.random()<.5?'0,0,0':'255,255,255'},${Math.random()*.09})`;g.fillRect(x*s+rand(0,s),y*s+rand(0,s),2,2);}}
@@ -23,17 +24,22 @@ const paveC=canvasOf(512,512,(g,w,h)=>{const n=8,s=w/n;for(let y=0;y<n;y++)for(l
 });
 const paveTex=texFromCanvas(paveC,true);
 const paveN=normalFromHeight(canvasOf(256,256,(g,w,h)=>{g.fillStyle='#fff';g.fillRect(0,0,w,h);g.strokeStyle='#000';g.lineWidth=3;for(let i=0;i<=8;i++){g.beginPath();g.moveTo(i*32,0);g.lineTo(i*32,h);g.stroke();g.beginPath();g.moveTo(0,i*32);g.lineTo(w,i*32);g.stroke();}}),4);
-const paveMat=new THREE.MeshStandardMaterial({map:paveTex,normalMap:paveN,roughness:.92,metalness:0});
+const paveMat=new THREE.MeshStandardMaterial({map:paveTex,normalMap:paveN,roughness:.92,metalness:0});applyPbr(paveMat,'pave',2);
 const curbMat=new THREE.MeshStandardMaterial({map:texFromCanvas(canvasOf(256,64,(g,w,h)=>{g.fillStyle='#9d9a94';g.fillRect(0,0,w,h);noise(g,w,h,3000,.15);g.fillStyle='rgba(0,0,0,.2)';for(let x=0;x<w;x+=64)g.fillRect(x,0,2,h);}),true),roughness:.8});
 // --- 立面贴图：颜色 / 粗糙金属 / 发光 / 法线 ---
 function facade(kind){
-  const W=TXS,FL=4,BY=4,fh=W/FL,bw=W/BY;
-  const col=document.createElement('canvas'),hgt=document.createElement('canvas'),rm=document.createElement('canvas'),em=document.createElement('canvas');
-  for(const c of[col,hgt,rm,em]){c.width=c.height=W;}
-  const g=col.getContext('2d'),hg=hgt.getContext('2d'),rg=rm.getContext('2d'),eg=em.getContext('2d');
+  const ph=({brick:'brick',plaster:'plaster',tile:'tile',dark:'concrete'})[kind],PH=ph&&AS.img[ph+'_diff'];
+  const W=PH?1024:TXS,FL=4,BY=4,fh=W/FL,bw=W/BY,RECTS=[];
+  const col=document.createElement('canvas'),hgt=document.createElement('canvas'),rm=document.createElement('canvas'),em=document.createElement('canvas'),nc=document.createElement('canvas');
+  for(const c of[col,hgt,rm,em,nc]){c.width=c.height=W;}
+  const g=col.getContext('2d'),hg=hgt.getContext('2d'),rg=rm.getContext('2d'),eg=em.getContext('2d'),ng=nc.getContext('2d');
   hg.fillStyle='#808080';hg.fillRect(0,0,W,W);rg.fillStyle='rgb(0,235,0)';rg.fillRect(0,0,W,W);eg.fillStyle='#000';eg.fillRect(0,0,W,W);
+  if(PH){const n=kind==='brick'?6:4,ts=W/n;for(let y=0;y<n;y++)for(let x=0;x<n;x++){g.drawImage(PH,x*ts,y*ts,ts,ts);if(AS.img[ph+'_nor'])ng.drawImage(AS.img[ph+'_nor'],x*ts,y*ts,ts,ts);if(AS.img[ph+'_rough'])rg.drawImage(AS.img[ph+'_rough'],x*ts,y*ts,ts,ts);}
+    rg.globalCompositeOperation='multiply';rg.fillStyle='rgb(0,255,0)';rg.fillRect(0,0,W,W);rg.globalCompositeOperation='source-over';
+    if(kind==='dark'){g.fillStyle='rgba(40,36,38,.35)';g.fillRect(0,0,W,W);}
+    g.fillStyle='rgba(230,225,215,.85)';for(let r=1;r<FL;r++){g.fillRect(0,r*fh-W/90,W,W/90);RECTS.push([0,r*fh-W/90,W,W/90]);}}
   // 墙面
-  if(kind==='brick'){g.fillStyle='#8a4a38';g.fillRect(0,0,W,W);for(let y=0;y<W;y+=8)for(let x=(y/8%2)*8;x<W;x+=16){const v=rand(-18,18);g.fillStyle=`rgb(${130+v},${68+v*.6},${52+v*.5})`;g.fillRect(x,y,15,7);hg.fillStyle='#999';hg.fillRect(x,y,15,7);}
+  if(PH){}else if(kind==='brick'){g.fillStyle='#8a4a38';g.fillRect(0,0,W,W);for(let y=0;y<W;y+=8)for(let x=(y/8%2)*8;x<W;x+=16){const v=rand(-18,18);g.fillStyle=`rgb(${130+v},${68+v*.6},${52+v*.5})`;g.fillRect(x,y,15,7);hg.fillStyle='#999';hg.fillRect(x,y,15,7);}
     g.fillStyle='rgba(210,200,185,.9)';for(let r=1;r<FL;r++)g.fillRect(0,r*fh-6,W,6);}
   else if(kind==='plaster'){g.fillStyle='#d6cbb5';g.fillRect(0,0,W,W);noise(g,W,W,9000,.08,3);
     for(let k=0;k<26;k++){const x=rand(0,W);const gr=g.createLinearGradient(0,0,0,W);gr.addColorStop(0,'rgba(60,55,45,.0)');gr.addColorStop(.3,'rgba(60,55,45,.12)');gr.addColorStop(1,'rgba(60,55,45,.02)');g.fillStyle=gr;g.fillRect(x,rand(0,W*.5),rand(3,14),W);}}
@@ -49,7 +55,7 @@ function facade(kind){
       rg.fillStyle='rgb(0,12,230)';rg.fillRect(x,y,w,h);rg.fillStyle='rgb(0,140,200)';rg.fillRect(x0,y0,bw,4);rg.fillRect(x0,y0,4,fh);
       hg.fillStyle='#606060';hg.fillRect(x,y,w,h);
     }else{
-      const narrow=kind==='brick';w=narrow?bw*.42:bw*.62;h=fh*(narrow?.56:.5);x=x0+(bw-w)/2;y=y0+fh*.2;
+      const narrow=kind==='brick';w=narrow?bw*.42:bw*.62;h=fh*(narrow?.56:.5);x=x0+(bw-w)/2;y=y0+fh*.2;RECTS.push([x-6,y-6,w+12,h+14]);
       hg.fillStyle='#202020';hg.fillRect(x,y,w,h);hg.fillStyle='#fff';hg.fillRect(x-4,y+h,w+8,5);
       g.fillStyle=kind==='brick'?'#d9d4c8':'#9aa0a4';g.fillRect(x-4,y-4,w+8,h+8);
       g.fillStyle='#2a2e33';g.fillRect(x,y,w,h);
@@ -72,14 +78,15 @@ function facade(kind){
   }
   // 屋顶用的角落像素
   g.fillStyle='#6d6a66';g.fillRect(0,W-6,6,6);rg.fillStyle='rgb(0,240,0)';rg.fillRect(0,W-6,6,6);eg.fillStyle='#000';eg.fillRect(0,W-6,6,6);
-  const map=texFromCanvas(col,true),rough=texFromCanvas(rm,true,false),emi=texFromCanvas(em,true),nrm=normalFromHeight(hgt,kind==='glass'?2:5);
+  let nrm;if(PH&&AS.img[ph+'_nor']){ng.fillStyle='rgb(128,128,255)';for(const r of RECTS)ng.fillRect(...r);nrm=texFromCanvas(nc,true,false);}else nrm=normalFromHeight(hgt,kind==='glass'?2:5);
+  const map=texFromCanvas(col,true),rough=texFromCanvas(rm,true,false),emi=texFromCanvas(em,true);
   return{map,rough,emi,nrm};
 }
 const FAC={brick:facade('brick'),plaster:facade('plaster'),tile:facade('tile'),glass:facade('glass'),dark:facade('dark')};
 const BMATS=[];const _bm={};
 function bmat(kind,tint){const k=kind+tint;if(_bm[k])return _bm[k];const f=FAC[kind];
   const m=new THREE.MeshStandardMaterial({color:tint,map:f.map,roughnessMap:f.rough,metalnessMap:f.rough,roughness:1,metalness:kind==='glass'?1:.6,normalMap:f.nrm,normalScale:new THREE.Vector2(.9,.9),emissive:0xffffff,emissiveMap:f.emi,emissiveIntensity:0,envMapIntensity:kind==='glass'?1.2:.8});
-  BMATS.push(m);return _bm[k]=m;}
+  m.userData.kind=kind;BMATS.push(m);return _bm[k]=m;}
 function bldGeo(w,h,d,x,y,z,T=12){
   const g=new THREE.BoxGeometry(w,h,d),uv=g.attributes.uv,F=[[d,h],[d,h],null,null,[w,h],[w,h]];
   for(let f=0;f<6;f++)for(let v=0;v<4;v++){const k=f*4+v;if(!F[f])uv.setXY(k,.004,.996);else uv.setXY(k,uv.getX(k)*F[f][0]/T,uv.getY(k)*F[f][1]/T);}
@@ -87,7 +94,7 @@ function bldGeo(w,h,d,x,y,z,T=12){
 }
 // --- 屋瓦 ---
 const roofTileC=canvasOf(256,256,(g,w,h)=>{g.fillStyle='#3d3936';g.fillRect(0,0,w,h);for(let y=0;y<h;y+=16)for(let x=(y/16%2)*8;x<w;x+=16){const v=rand(-10,14);g.fillStyle=`rgb(${66+v},${60+v},${56+v})`;g.beginPath();g.ellipse(x+8,y+10,8,9,0,0,Math.PI*2);g.fill();}noise(g,w,h,2000,.15);});
-const roofMat=new THREE.MeshStandardMaterial({map:texFromCanvas(roofTileC,true),normalMap:normalFromHeight(roofTileC,3),roughness:.85});
+const roofMat=new THREE.MeshStandardMaterial({map:texFromCanvas(roofTileC,true),normalMap:normalFromHeight(roofTileC,3),roughness:.85});applyPbr(roofMat,'roof',1.4);
 // --- 商铺 ---
 function interiorTex(kind){return ctex(256,128,(g,w,h)=>{
   const warm=kind!=='cold';g.fillStyle=warm?'#5a3a22':'#c9d2d8';g.fillRect(0,0,w,h);
@@ -135,4 +142,13 @@ const poolMat=new THREE.MeshBasicMaterial({map:poolTex,transparent:true,opacity:
 const manholeTex=ctex(128,128,(g)=>{g.clearRect(0,0,128,128);g.fillStyle='#2a2a2c';g.beginPath();g.arc(64,64,60,0,7);g.fill();g.strokeStyle='#4a4a4c';g.lineWidth=4;for(let r=12;r<58;r+=10){g.beginPath();g.arc(64,64,r,0,7);g.stroke();}g.fillStyle='#555';g.font='bold 16px sans-serif';g.textAlign='center';g.fillText('污 水',64,70);});
 const manholeMat=new THREE.MeshStandardMaterial({map:manholeTex,transparent:true,roughness:.4,metalness:.8,polygonOffset:true,polygonOffsetFactor:-1});
 const concreteC=canvasOf(256,256,(g,w,h)=>{g.fillStyle='#9a9792';g.fillRect(0,0,w,h);noise(g,w,h,8000,.12,3);for(let k=0;k<10;k++){g.fillStyle='rgba(50,45,40,.08)';g.fillRect(rand(0,w),0,rand(4,20),h);}});
-const concreteMat=new THREE.MeshStandardMaterial({map:texFromCanvas(concreteC,true),normalMap:normalFromHeight(concreteC,1.5),roughness:.9});
+const concreteMat=new THREE.MeshStandardMaterial({map:texFromCanvas(concreteC,true),normalMap:normalFromHeight(concreteC,1.5),roughness:.9});applyPbr(concreteMat,'concrete',3);applyPbr(curbMat,'concrete',1,.25);
+
+// ---- 伪环境光遮蔽：墙根、车底、树下 ----
+const aoGradTex=ctex(8,64,(g,w,h)=>{const gr=g.createLinearGradient(0,h,0,0);gr.addColorStop(0,'rgba(0,0,0,.55)');gr.addColorStop(.35,'rgba(0,0,0,.18)');gr.addColorStop(1,'rgba(0,0,0,0)');g.clearRect(0,0,w,h);g.fillStyle=gr;g.fillRect(0,0,w,h);},false,false);
+const aoWallM=new THREE.MeshBasicMaterial({map:aoGradTex,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2});
+const blobTex=ctex(64,128,(g,w,h)=>{const gr=g.createRadialGradient(w/2,h/2,4,w/2,h/2,w/2);gr.addColorStop(0,'rgba(0,0,0,.75)');gr.addColorStop(.7,'rgba(0,0,0,.35)');gr.addColorStop(1,'rgba(0,0,0,0)');g.save();g.translate(w/2,h/2);g.scale(1,2);g.translate(-w/2,-h/2);g.fillStyle=gr;g.fillRect(0,0,w,h);g.restore();},false,false);
+const blobM=new THREE.MeshBasicMaterial({map:blobTex,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-4});
+const treeAoTex=ctex(64,64,(g,w,h)=>{const gr=g.createRadialGradient(32,32,2,32,32,32);gr.addColorStop(0,'rgba(0,0,0,.12)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,0,w,h);},false,false);
+const treeAoM=new THREE.MeshBasicMaterial({map:treeAoTex,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-4});
+function blobShadow(L=4.8,W=2.2){const g=new THREE.PlaneGeometry(W*1.15,L*1.1);g.rotateX(-Math.PI/2);const m=new THREE.Mesh(g,blobM);m.position.y=.02;m.renderOrder=-1;return m;}

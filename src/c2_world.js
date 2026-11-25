@@ -24,6 +24,7 @@ function aiUpdate(dt){
     const W=a.elev?340:318;if(a.pos>W)a.pos=-W;if(a.pos<-W)a.pos=W;
     const y=a.elev?10.4:0;
     if(a.ax==='x'){a.g.position.set(a.pos,y,a.lat);a.g.rotation.y=a.dir>0?-Math.PI/2:Math.PI/2;}else{a.g.position.set(a.lat,y,a.pos);a.g.rotation.y=a.dir>0?Math.PI:0;}
+    if(a.m){a.m.position.copy(a.g.position);a.m.rotation.y=a.g.rotation.y;}
     if(!a.elev){const dx=car.x-a.g.position.x,dz=car.z-a.g.position.z,d=Math.hypot(dx,dz);
       if(d<2.6&&d>.01){const push=2.6-d;car.x+=dx/d*push;car.z+=dz/d*push;if(!legal(car.x,car.z)){car.x-=dx/d*push;car.z-=dz/d*push;}if(Math.abs(car.speed)>2.5){bump('和别的车蹭了一下');car.shake=1;}car.speed*=-.25;}}
   }
@@ -56,7 +57,7 @@ function drawRoute(path){
     m.position.set((a.x+b.x)/2+(-dz/L)*off,.06,(a.z+b.z)/2+(dx/L)*off);m.rotation.y=Math.atan2(-dz,dx);routeGroup.add(m);}
 }
 // ================= 面馆室内 =================
-const shopScene=new THREE.Scene();shopScene.background=new THREE.Color(0x1a1512);shopScene.environment=ENV.dusk;
+const STOOL_IN=[];const shopScene=new THREE.Scene();shopScene.background=new THREE.Color(0x1a1512);shopScene.environment=ENV.dusk;
 const shopCam=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.05,100);shopCam.rotation.order='YXZ';shopCam.position.set(0,1.6,4.3);
 {
   const wallC=canvasOf(512,512,(g,w,h)=>{g.fillStyle='#e6dcc4';g.fillRect(0,0,w,h);noise(g,w,h*.6,6000,.06,3);for(let k=0;k<20;k++){g.fillStyle='rgba(120,90,50,.05)';g.fillRect(rand(0,w),0,rand(4,30),h*.6);}
@@ -66,6 +67,7 @@ const shopCam=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.05,100);sho
   const flC=canvasOf(256,256,(g)=>{for(let y=0;y<8;y++)for(let x=0;x<8;x++){const v=(x+y)%2?rand(178,190):rand(120,132);g.fillStyle=`rgb(${v},${v-6},${v-14})`;g.fillRect(x*32,y*32,32,32);}noise(g,256,256,3000,.08);});
   const floorTex=texFromCanvas(flC,true);floorTex.repeat.set(2,3);
   const fl=new THREE.Mesh(new THREE.PlaneGeometry(8,11),new THREE.MeshStandardMaterial({map:floorTex,roughness:.35,metalness:0}));fl.rotation.x=-Math.PI/2;fl.position.y=.01;fl.receiveShadow=true;shopScene.add(fl);
+  applyPbr(room.material,'shopwall',4,1.3,{side:THREE.BackSide});applyPbr(fl.material,'shopfloor',4,5.5,{roughness:.6});
   shopScene.add(new THREE.HemisphereLight(0xfff0dd,0x403020,.35));
   for(const z of[-3,0,3]){const t=new THREE.Mesh(new THREE.BoxGeometry(1.4,.05,.14),new THREE.MeshBasicMaterial({color:0xfaffff,toneMapped:false}));t.position.set(0,3.27,z);shopScene.add(t);
     const l=new THREE.PointLight(0xfff4e4,.7,9,1.5);l.position.set(0,3.1,z);l.castShadow=z===0;shopScene.add(l);}
@@ -79,10 +81,11 @@ const shopCam=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.05,100);sho
   s(bx(.9,.55,.06,0,-3.6,2.7,-5.45,std('#111',.3,.4)));shopScene.add(bx(.82,.47,.01,0,-3.6,2.7,-5.41,new THREE.MeshBasicMaterial({color:0x4a7ab8})));
   for(const[x,z]of[[-2.4,-1.6],[2.4,-1.6],[-2.4,1.4],[2.4,1.4]]){s(new THREE.Mesh(rboxG(1.3,.8,.05,.03),std('#d9cdb4',.4))).position.set(x,.77,z);shopScene.children[shopScene.children.length-1].rotation.x=Math.PI/2;
     s(bx(.06,.74,.06,0,x,.37,z,std('#555',.4,.8)));
-    for(const q of[-1,1]){const st=s(new THREE.Mesh(new THREE.CylinderGeometry(.17,.15,.45,20),std('#b8232a',.35)));st.position.set(x,.23,z+q*.7);}
+    for(const q of[-1,1]){if(AS.gltf.chinese_stool)STOOL_IN.push({x,y:0,z:z+q*.72,ry:q>0?0:Math.PI,sx:.8,sy:.75,sz:.8});else{const st=s(new THREE.Mesh(new THREE.CylinderGeometry(.17,.15,.45,20),std('#b8232a',.35)));st.position.set(x,.23,z+q*.7);}}
     s(new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,.15,12),std('#6a3a1a',.3))).position.set(x+.42,.87,z);s(new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,.12,12),std('#e8e0d0',.2))).position.set(x+.32,.86,z);}
   const win=new THREE.Mesh(new THREE.PlaneGeometry(5,1.8),new THREE.MeshBasicMaterial({color:0x223040}));win.position.set(0,1.6,5.48);win.rotation.y=Math.PI;shopScene.add(win);shopScene.userData.win=win;
 }
+instParts(gltfParts('chinese_stool'),STOOL_IN,shopScene);
 const chen=makePerson({top:'#e8e6e0',bottom:'#333',apron:true,hat:true,skin:'#d6a984',fem:false});chen.position.set(-.4,0,-5.2);chen.rotation.y=0;shopScene.add(chen);
 const linShop=makePerson({top:'#1a1a1d',bottom:'#2a2a30',hair:'#120d0b',longHair:true,seated:true,fem:true,skin:'#ecc7a4'});linShop.position.set(2.4,.12,-2.3);shopScene.add(linShop);
 {const bowl=new THREE.Mesh(new THREE.SphereGeometry(.13,20,10,0,Math.PI*2,Math.PI/2,Math.PI/2),std('#f2efe6',.2,0,{side:THREE.DoubleSide}));bowl.position.set(2.4,.95,-1.75);shopScene.add(bowl);linShop.userData.bowl=bowl;}
@@ -106,12 +109,14 @@ function envUpdate(){
   sun.position.set(cx+sd.x*220,sd.y*220,cz+sd.z*220);sun.target.position.set(cx,0,cz);
   sun.intensity=Math.max(0,day)*2.4*(1-NIGHT);sun.color.setHSL(.09,.7,lerp(.62,.95,clamp(day*2,0,1)));sun.castShadow=day>.02;
   hemi.intensity=lerp(.55,.12,NIGHT);hemi.color.copy(_c2).lerp(new THREE.Color(0x8aa0c8),.4);
-  scene.environment=NIGHT>.6?ENV.night:DUSK>.5||NIGHT>.25?ENV.dusk:ENV.day;
-  for(const m of BMATS)m.emissiveIntensity=NIGHT*1.6;
-  lampHeadMat.emissiveIntensity=NIGHT*6;poolMat.opacity=NIGHT*.5;glowMat.opacity=NIGHT*.9;
+  const ek=NIGHT>.6?'night':DUSK>.5||NIGHT>.25?'dusk':'day';scene.environment=ek==='night'?ENV0.night:ENV[ek];
+  if(USE_HDR&&BG[ek]){scene.background=BG[ek];scene.backgroundIntensity=ek==='night'?1.2:ek==='dusk'?1.1:1;const hi=HDRI[ek];scene.fog.color.copy(hi.fog).multiplyScalar(ek==='night'?.18:ek==='dusk'?.8:1);
+    if(ek!=='night'&&hi.sun.y>.04){sun.position.set(cx+hi.sun.x*220,hi.sun.y*220,cz+hi.sun.z*220);}scene.environmentIntensity=1;}
+  for(const m of BMATS)m.emissiveIntensity=NIGHT*(m.userData.kind==='glass'?.28:.75);
+  lampHeadMat.emissiveIntensity=NIGHT*2.5;poolMat.opacity=NIGHT*.5;glowMat.opacity=NIGHT*.9;
   for(const m of SIGNMATS)m.emissiveIntensity=lerp(.12,m.userData.neon?3.2:1.4,NIGHT);
   for(const m of INT_MATS)m.emissiveIntensity=lerp(.25,1.5,NIGHT);
-  towerGlow.emissiveIntensity=NIGHT*2.5;
+  towerGlow.emissiveIntensity=NIGHT*2.5;if(typeof carModelLights==='function')carModelLights();
   carLightMats.head.emissiveIntensity=NIGHT>.4?5:0;carLightMats.tail.emissiveIntensity=NIGHT>.4?3:.15;
   elevLight.color.setHex(NIGHT>.4?0x6fd0ff:0x606060);bridgeLights.color.setHex(NIGHT>.4?0xffd27a:0x707070);
   roadMat.roughness=lerp(1,.62,NIGHT);roadMat.envMapIntensity=lerp(.6,1.4,NIGHT);

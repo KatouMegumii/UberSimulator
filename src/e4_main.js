@@ -3,8 +3,7 @@
 {const sm=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false});const G=carGeos('sedan');
   const b=new THREE.Mesh(G.body,sm);b.castShadow=true;carG.add(b);
   const roof=new THREE.Mesh(new THREE.BoxGeometry(1.4,.06,1.5),sm);roof.position.set(0,1.46,.5);roof.castShadow=true;carG.add(roof);
-  carG.traverse(o=>{if(o.isMesh&&o.material!==windM&&o.material!==sm)o.castShadow=true;});}
-mountG.position.set(-.1,.99,-.34);
+  carG.traverse(o=>{if(o.isMesh&&o.material!==windM&&o.material!==sm)o.castShadow=true;});b.name='shadowProxy';roof.name='shadowProxy';}
 
 // ================= HUD =================
 let hudT=0;
@@ -79,6 +78,7 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyH'){UI.helpHidden=!UI.helpHidden;$('#help').classList.toggle('hidden',UI.helpHidden);}
   if(e.code==='KeyV'){UI.voice=!UI.voice;toast('语音播报 '+(UI.voice?'开':'关'));}
   if(e.code==='KeyG'){POST.on=!POST.on;toast('后期效果 '+(POST.on?'开':'关'));}
+  if(e.code==='KeyC'&&S.loc==='car'){setCockpit(COCKPIT.mode==='model'?'proc':'model');toast(COCKPIT.mode==='model'?'驾驶舱：写实模型':'驾驶舱：程序化');}
 });
 addEventListener('keyup',e=>{if(KEYMAP[e.code])keys[KEYMAP[e.code]]=false;});
 addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
@@ -142,7 +142,7 @@ function placeCar(dt){
   car.shake=Math.max(0,car.shake-dt*2.5);
   const tm=performance.now()/1000,vib=Math.min(1,Math.abs(car.speed)/14),road=(Math.sin(tm*31)*.5+Math.sin(tm*47.3)*.3+Math.sin(tm*13.1)*.6)*.0012*vib;
   carG.position.set(car.x,road+car.shake*.02*Math.sin(tm*60),car.z);carG.rotation.set(car.pitch,car.h,car.roll);
-  wheelSpin.rotation.z=car.steer*3.4;
+  wheelSpin.rotation.z=car.steer*3.4;if(COCKPIT.pivot)COCKPIT.pivot.rotation.z=-car.steer*3.4;
   // 头部：惯性前后倾、转弯侧倾
   head.position.set(EYE.x-clamp(lat*.004,-.05,.05),EYE.y+road*.6+car.shake*.015*Math.sin(tm*45),EYE.z+clamp(car.accel*.006,-.05,.04));
   const g=UI.phone==='glance';glanceK=lerp(glanceK,g?1:0,Math.min(1,dt*7));
@@ -158,7 +158,7 @@ function placeCar(dt){
 let last=performance.now(),clusterT=0,ccT=0,mirT=0,frame=0;
 function update(dt){
   if(S.started&&!UI.modal&&!fading){S.acc+=dt*S.ts;while(S.acc>=1){S.acc-=1;tickMinute();}}
-  if(S.loc==='car'){drive(dt);aiUpdate(dt);placeCar(dt);}
+  if(S.loc==='car'){drive(dt);aiUpdate(dt);carLOD(dt);placeCar(dt);}
   pedUpdate(dt);paxWalk(dt);
   if(S.offer&&!UI.modal){S.offer.expire-=dt;if(S.offer.expire<=0){S.offer=null;S.offerCd=4;S.stats.skipped++;renderPhone(true);}else{const c=$('#offerCd');if(c)c.textContent=Math.ceil(S.offer.expire)+'s';}}
   if(S.offerCd>0)S.offerCd-=dt;
@@ -180,7 +180,7 @@ function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;frame++;updat
   if(S.loc==='shop'){renderer.shadowMap.needsUpdate=true;renderPost(shopScene,shopCam,{th:1.6,str:.35,tired,exp:1.05});}
   else{
     if(frame%2===0){routeGroup.visible=false;renderer.setRenderTarget(mirrorRT);renderer.toneMapping=THREE.NoToneMapping;renderer.render(scene,mirrorCam);renderer.setRenderTarget(sideRT);renderer.render(scene,sideCam);renderer.setRenderTarget(null);routeGroup.visible=true;}
-    renderer.shadowMap.needsUpdate=true;renderPost(scene,camera,{th:lerp(1.4,.9,NIGHT),str:lerp(.25,.85,NIGHT),tired,exp:lerp(1,1.25,NIGHT)});
+    renderer.shadowMap.needsUpdate=true;renderPost(scene,camera,{th:lerp(1.5,1.1,NIGHT),str:lerp(.22,.6,NIGHT),tired,exp:lerp(1,1.05,NIGHT)});
   }
   placePhoneDOM();
   requestAnimationFrame(loop);}
@@ -193,6 +193,7 @@ function startGame(){
   notify('didi','滴滴车主','欢迎加入。出车后系统会按你的位置和时段派单，也可以去「抢单」大厅抢实时单和预约单。');
   notify('ths','同花顺','周末休市。A 股下次开盘：'+nextOpenStr());
   setPhoneMode('mount');renderPhone(true);
+  setTimeout(()=>{if(!UI.helpHidden){UI.helpHidden=true;$('#help').classList.add('hidden');}},30000);
 }
 newWake();
 openModal(`<h1>桥西夜班</h1><div class="muted">首轮验证 Demo · 一台车 · 一片街区 · 一家面馆 · 一个人</div>

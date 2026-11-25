@@ -1,5 +1,6 @@
 'use strict';
-if(!window.THREE){document.body.insertAdjacentHTML('beforeend','<div id="loadErr">无法加载 Three.js（需要联网访问 cdn.jsdelivr.net 或 unpkg.com）。<br>请联网后用 Chrome / Edge 打开本文件。</div>');throw new Error('THREE missing');}
+if(!window.THREE){document.body.insertAdjacentHTML('beforeend','<div id="loadErr">无法加载 Three.js，请检查网络。</div>');throw new Error('THREE missing');}
+const AS=window.ASSETS||{hdr:{},img:{},gltf:{}};const HAS=k=>!!(AS.img[k+'_diff']);
 // ================= 工具 =================
 const $=s=>document.querySelector(s);
 const rand=(a,b)=>a+Math.random()*(b-a);

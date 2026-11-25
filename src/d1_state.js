@@ -50,17 +50,16 @@ function tickMinute(){
   S.t++;const m=S.t%1440;
   if(m===0&&!S.asleep)toast('新的一天 · '+dateStr(S.t));
   let drain=S.asleep?0:.035;
-  if(S.loc==='car'&&Math.abs(car.speed)>2){drain+=.05;S.battery=Math.max(5,S.battery-.06);}
+  if(S.loc==='car'&&Math.abs(car.speed)>2){drain+=.05;}
   if(S.order)drain+=.012;
   S.energy=Math.max(0,S.energy-drain);
   if(S.online&&S.wake)S.wake.onlineMin++;
-  driverTick();economy();linTick();stockTick();
+  driverTick();economy();linTick();stockTick();if(typeof lawTick==='function')lawTick();if(typeof evTick==='function')evTick();
   if(!S.asleep){
     if(S.energy<25&&!S.warned.e25){S.warned.e25=1;toast('有点累了。可以吃点东西或回家休息。','warn');}
     if(S.energy<10&&!S.warned.e10){S.warned.e10=1;toast('眼皮在打架。再开下去不安全。','warn');}
     if(S.energy<=0&&S.loc==='car')passOut();
   }
-  if(S.battery<15&&!S.warned.bat){S.warned.bat=1;toast('电量偏低（原型中充电未开放，睡觉时车行代充）','warn');}
 }
 function advance(mins){for(let k=0;k<mins;k++)tickMinute();}
 

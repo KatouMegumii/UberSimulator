@@ -70,7 +70,7 @@ function homeAct(a){
   if(a==='nap')mins=60;else if(a==='eight')mins=480;else mins=m<420?420-m:1440-m+420;
   fadeTo(a==='nap'?'小睡一会儿……':'睡觉',()=>{
     S.asleep=true;advance(mins);S.asleep=false;
-    S.energy=Math.min(100,S.energy+mins/60*(a==='nap'?14:12.5));S.battery=100;S.warned={};
+    S.energy=Math.min(100,S.energy+mins/60*(a==='nap'?14:12.5));S.warned={};
     if(a==='nap'){renderHome();return;}
     showSummary(start);
   });
@@ -110,7 +110,7 @@ function dlgUpdate(dt){if(UI.dlg&&!UI.dlg.choices&&UI.dlg.dur){dlgTimer+=dt;if(d
 // ================= 模态 / 提示 / 渐变 =================
 function openModal(html,side){UI.modal=true;$('#modalCard').innerHTML=html;$('#modal').classList.remove('hidden');$('#modal').classList.toggle('side',!!side);}
 function closeModal(){UI.modal=false;$('#modal').classList.add('hidden');}
-function toast(html,cls){const d=document.createElement('div');d.className='toast '+(cls||'');d.innerHTML=html;$('#toasts').prepend(d);setTimeout(()=>d.remove(),5200);while($('#toasts').children.length>5)$('#toasts').lastChild.remove();}
+function toast(html,cls){const d=document.createElement('div');d.className='toast '+(cls||'');d.innerHTML=html;$('#toasts').prepend(d);setTimeout(()=>d.remove(),5200);while($('#toasts').children.length>3)$('#toasts').lastChild.remove();}
 let fading=false;
 function fadeTo(text,cb){if(fading){cb();return;}fading=true;const f=$('#fade');f.textContent=text;f.style.opacity=1;setTimeout(()=>{cb();renderPhone(true);setTimeout(()=>{f.style.opacity=0;fading=false;},700);},650);}
 function bump(t){car.shake=Math.max(car.shake,.6);if(performance.now()-(bump.l||0)<1500)return;bump.l=performance.now();thud();if(S.order&&S.order.phase==='toDrop'){S.order.bumps++;if(S.order.npc!=='lin'&&S.order.bumps===1)showDlg('乘客','哎哟——师傅开稳一点。',null,3);}if(t)toast(t,'warn');}

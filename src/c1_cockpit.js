@@ -89,8 +89,8 @@ const windM=new THREE.MeshStandardMaterial({color:0xffffff,map:dirtTex,transpare
 // --- 后视镜（中央，实时渲染）---
 const mirrorRT=new THREE.WebGLRenderTarget(320,96,{type:THREE.HalfFloatType});const sideRT=new THREE.WebGLRenderTarget(160,128,{type:THREE.HalfFloatType});
 mirrorRT.texture.wrapS=sideRT.texture.wrapS=THREE.RepeatWrapping;mirrorRT.texture.repeat.x=sideRT.texture.repeat.x=-1;
-const mirrorCam=new THREE.PerspectiveCamera(22,320/96,.2,600),sideCam=new THREE.PerspectiveCamera(26,160/128,.5,500);
-{const g=new THREE.Group();g.position.set(-.02,1.32,-.36);carG.add(g);M(new THREE.CylinderGeometry(.008,.008,.08,6),dashM,0,.06,0,0,0,0,g);
+const mirrorCam=new THREE.PerspectiveCamera(22,320/96,.2,260),sideCam=new THREE.PerspectiveCamera(26,160/128,.5,220);
+{const g=new THREE.Group();g.name='rearMirror';g.position.set(-.02,1.32,-.36);carG.add(g);M(new THREE.CylinderGeometry(.008,.008,.08,6),dashM,0,.06,0,0,0,0,g);
   M(rboxG(.27,.085,.035,.02),dashM,0,0,0,0,0,0,g);const s=M(new THREE.PlaneGeometry(.25,.07),new THREE.MeshBasicMaterial({map:mirrorRT.texture}),0,0,.0185,0,0,0,g);g.rotation.set(-.05,.12,0);
   carG.add(mirrorCam);mirrorCam.position.set(-.02,1.3,.2);mirrorCam.rotation.set(-.03,Math.PI,0);}
 {const lm=carG.userData.lm;M(new THREE.PlaneGeometry(.17,.1),new THREE.MeshBasicMaterial({map:sideRT.texture}),-.03,0,0,0,Math.PI/2+.25,0,lm);lm.rotation.y=-.0;

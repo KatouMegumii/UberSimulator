@@ -1,5 +1,5 @@
 // ================= 林晚 =================
-function makeLin(seated){return makePerson({top:'#1a1a1d',bottom:'#2a2a30',hair:'#120d0b',longHair:true,skin:'#ecc7a4',fem:true,seated:!!seated,h:1});}
+function makeLin(seated){if(!seated&&typeof PT_WALK!=='undefined'&&PT_WALK[3]&&window.SkeletonUtils){const g=makeRealPed(PT_WALK[3]);g.userData.mixer&&g.userData.mixer.update(.4);g.userData.mixer=null;return g;}return makePerson({top:'#1a1a1d',bottom:'#2a2a30',hair:'#120d0b',longHair:true,skin:'#ecc7a4',fem:true,seated:!!seated,h:1});}
 let ride=null;
 function linRideStart(o){
   const first=!L.met;ride={t:0,step:0,first,kind:o.kind,o};

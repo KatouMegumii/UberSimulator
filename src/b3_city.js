@@ -10,7 +10,7 @@ const FACE_R={'-z':Math.PI,'+z':0,'-x':-Math.PI/2,'+x':Math.PI/2};
 const FACE_N={'-z':[0,-1],'+z':[0,1],'-x':[-1,0],'+x':[1,0]};
 const RESERVE=[{i:0,j:3,face:'+x',a0:40,a1:60},{i:1,j:2,face:'+z',a0:-164,a1:-136},{i:4,j:2,face:'+x',a0:-64,a1:-36}];
 function reserved(i,j,face,a0,a1){return RESERVE.some(r=>r.i===i&&r.j===j&&r.face===face&&a1>r.a0&&a0<r.a1);}
-const TREES=[],LAMPS=[],ACS=[],BIKES=[],GLOWS=[],SIGNALS=[];
+const TREES=[],LAMPS=[],ACS=[],BIKES=[],GLOWS=[],SIGNALS=[],SHUTTERS=[],UTILS=[],TRASH=[],MANH=[],CHAIRS=[],STOOLS=[];
 // 沿立面方向放置：along 为沿墙的偏移，out 为向外偏移
 function fpos(face,fx,fz,along,out){const[nx,nz]=FACE_N[face];return nx?{x:fx+nx*out,z:fz+along}:{x:fx+along,z:fz+nz*out};}
 function fbox(mat,face,fx,fz,along,out,y,wAlong,h,dOut,cast=true){const p=fpos(face,fx,fz,along,out);const[nx]=FACE_N[face];addB(mat,nx?boxG(dOut,h,wAlong,p.x,y,p.z):boxG(wAlong,h,dOut,p.x,y,p.z),cast);}
@@ -20,12 +20,13 @@ function addStorefront(face,fx,fz,w,zone,txt){
   const sw=w-1.2,closed=srand()<(zone==='com'?.12:.22);
   fbox(frameMat,face,fx,fz,0,.25,4.1,w,.5,.5);              // 门头框
   fbox(frameMat,face,fx,fz,-w/2+.25,.25,2,.3,4,.5);fbox(frameMat,face,fx,fz,w/2-.25,.25,2,.3,4,.5);
-  if(closed)fplane(shutterMat,face,fx,fz,0,.08,1.9,sw,3.6);
+  if(closed){if(AS.gltf.rollershutter_door){const p=fpos(face,fx,fz,0,.02);SHUTTERS.push({x:p.x,y:.15,z:p.z,ry:FACE_R[face],sx:sw/1.08,sy:3.5/2.4,sz:1});}else fplane(shutterMat,face,fx,fz,0,.08,1.9,sw,3.6);}
   else{fplane(INT_MATS[srand()*4|0],face,fx,fz,0,.06,1.8,sw,3.4);
     const gm=std('#9fb4c0',.05,.9,{transparent:true,opacity:.22});fplane(gm,face,fx,fz,0,.42,1.8,sw,3.4);
     fbox(frameMat,face,fx,fz,0,.42,1.8,.08,3.4,.06);
     GLOWS.push({...fpos(face,fx,fz,0,1.2),y:2.2,c:0xffd8a0,s:3.5});}
   txt=txt||spick(SHOPS[zone]);
+  if(!closed&&/烧烤|夜宵|小龙虾|烤串|麻辣烫|沙县|生煎|早点/.test(txt)){for(let k=0;k<randi(2,4);k++){const p=fpos(face,fx,fz,sr(-w/2.5,w/2.5),sr(1.6,3.2));(Math.random()<.6?CHAIRS:STOOLS).push({x:p.x,y:.15,z:p.z,ry:rand(0,6.28)});}}
   const style=zone==='night'?(srand()<.6?'neon':'dark'):spick(['red','green','blue','yellow','white','dark','orange']);
   fplane(signMat(txt,style),face,fx,fz,0,.52,4.75,Math.min(sw,8),Math.min(sw,8)/4.2);
   if(srand()<.55){const[nx,nz]=FACE_N[face];const L=sw,D=1.4;const sh=new THREE.Shape();sh.moveTo(0,0);sh.lineTo(D,-.45);sh.lineTo(D,-.6);sh.lineTo(0,-.08);
@@ -84,7 +85,8 @@ function genBlock(i,j){
       let skip=false;for(const k in PLACES)if(Math.hypot(PLACES[k].spot.x-x,PLACES[k].spot.z-z)<10)skip=true;
       if(!skip&&(zone!=='night'||srand()<.35))TREES.push({x,z,s:sr(.85,1.2),r:srand()*6.28});}
     for(let a=-30;a<=30;a+=30){const x=ax==='x'?c0+a+5:fix+s*1.3,z=ax==='x'?fix+s*1.3:c0+a+5;LAMPS.push({x,z,ax,s});}
-    if(srand()<.5){const x=ax==='x'?c0+sr(-30,30):fix+s*-.6,z=ax==='x'?fix+s*-.6:c0+sr(-30,30);addB(std('#2f5f3a',.6,.3),boxG(.5,.9,.5,x,.6,z));}
+    if(srand()<.5){const x=ax==='x'?c0+sr(-30,30):fix+s*-.6,z=ax==='x'?fix+s*-.6:c0+sr(-30,30);if(AS.gltf.utility_box_02)UTILS.push({x,y:.15,z,ry:ax==='x'?(s>0?0:Math.PI):(s>0?Math.PI/2:-Math.PI/2),k:srand()<.5?1:2});else addB(std('#2f5f3a',.6,.3),boxG(.5,.9,.5,x,.6,z));}
+    if(srand()<.35){const x=ax==='x'?c0+sr(-34,34):fix+s*-.4,z=ax==='x'?fix+s*-.4:c0+sr(-34,34);TRASH.push({x,y:.15,z,ry:rand(0,6.28)});}
   }
 }
 for(let i=0;i<6;i++)for(let j=0;j<6;j++)genBlock(i,j);
@@ -123,8 +125,7 @@ for(let l=0;l<7;l++)for(let s=0;s<6;s++){
   for(const e of[a0+2.2,a1-2.2])for(let q=-6.2;q<=6.2;q+=1.1){addB(lineW,boxG(3.2,.02,.5,e,.013,c+q),false);addB(lineW,boxG(.5,.02,3.2,c+q,.013,e),false);}
   addB(lineW,boxG(.35,.02,6.6,a0+4.3,.013,c+3.4),false);addB(lineW,boxG(.35,.02,6.6,a1-4.3,.013,c-3.4),false);
   addB(lineW,boxG(6.6,.02,.35,c-3.4,.013,a0+4.3),false);addB(lineW,boxG(6.6,.02,.35,c+3.4,.013,a1-4.3),false);
-  if(srand()<.6){const g=new THREE.CircleGeometry(.4,20);g.rotateX(-Math.PI/2);g.translate(mid+sr(-30,30),.014,c+sr(-5,5));addB(manholeMat,g,false);}
-  if(srand()<.6){const g=new THREE.CircleGeometry(.4,20);g.rotateX(-Math.PI/2);g.translate(c+sr(-5,5),.014,mid+sr(-30,30));addB(manholeMat,g,false);}
+  for(const ew of[1,0])if(srand()<.6){const x=ew?mid+sr(-30,30):c+sr(-5,5),z=ew?c+sr(-5,5):mid+sr(-30,30);if(AS.gltf.water_manhole_cover)MANH.push({x,y:-.01,z,ry:rand(0,6.28)});else{const g=new THREE.CircleGeometry(.4,20);g.rotateX(-Math.PI/2);g.translate(x,.014,z);addB(manholeMat,g,false);}}
 }
 // 特殊建筑：永安里弄堂口（家）
 const stoneMat=new THREE.MeshStandardMaterial({map:texFromCanvas(canvasOf(256,256,(g,w,h)=>{g.fillStyle='#8f8576';g.fillRect(0,0,w,h);noise(g,w,h,6000,.15,3);g.strokeStyle='rgba(50,45,40,.35)';for(let y=0;y<h;y+=32){g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke();}}),true),roughness:.85});

@@ -79,4 +79,11 @@ const LPOOL=[];for(let k=0;k<6;k++){const l=new THREE.PointLight(0xffc98a,0,26,1
 let lpT=0;
 function lampLightsUpdate(px,pz,night){lpT++;if(lpT%20&&night===lampLightsUpdate.n)return;lampLightsUpdate.n=night;
   const near=LAMPS.map(l=>({l,d:(l.hx-px)**2+(l.hz-pz)**2})).sort((a,b)=>a.d-b.d).slice(0,LPOOL.length);
-  LPOOL.forEach((p,k)=>{const n=near[k];if(!n){p.intensity=0;return;}p.position.set(n.l.hx,7.6,n.l.hz);p.intensity=night*1.6;});}
+  LPOOL.forEach((p,k)=>{const n=near[k];if(!n){p.intensity=0;return;}p.position.set(n.l.hx,7.6,n.l.hz);p.intensity=night*1.1;});}
+
+// --- 写实道具（glTF 实例化）---
+instParts(gltfParts('rollershutter_door',o=>!/graffiti/.test(o.name)),SHUTTERS,city,false);
+instParts(gltfParts('utility_box_01'),UTILS.filter(u=>u.k===1),city);instParts(gltfParts('utility_box_02'),UTILS.filter(u=>u.k===2),city);
+instParts(gltfParts('metal_trash_can',o=>!/rust/.test(o.name)),TRASH,city);
+instParts(gltfParts('water_manhole_cover'),MANH,city,false);
+instParts(gltfParts('plastic_monobloc_chair_01'),CHAIRS,city);instParts(gltfParts('chinese_stool'),STOOLS,city);

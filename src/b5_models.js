@@ -40,7 +40,7 @@ function makePerson(o={}){
   g.userData={legs,arms,head,phase:Math.random()*6,seated:!!o.seated};
   return g;
 }
-function animPerson(g,dt,moving){const u=g.userData;if(u.seated)return;if(moving)u.phase+=dt*6.5;const s=moving?Math.sin(u.phase):0;
+function animPerson(g,dt,moving){const u=g.userData;if(u.mixer){u.mixer.update(moving?dt:0);return;}if(u.seated||!u.legs)return;if(moving)u.phase+=dt*6.5;const s=moving?Math.sin(u.phase):0;
   u.legs[0].rotation.x=s*.5;u.legs[1].rotation.x=-s*.5;u.legs[0].userData.knee.rotation.x=Math.max(0,-s)*.7;u.legs[1].userData.knee.rotation.x=Math.max(0,s)*.7;
   u.arms[0].rotation.x=-s*.4;u.arms[1].rotation.x=s*.4;u.arms[0].userData.elbow.rotation.x=-.25;u.arms[1].userData.elbow.rotation.x=-.25;}
 
@@ -67,6 +67,7 @@ function makeCar(color,kind='sedan'){
   for(const s of[-1,1]){const h=new THREE.Mesh(rboxG(.42,.13,.06,.03),carLightMats.head);h.position.set(s*.6,.76,-2.33);g.add(h);const t=new THREE.Mesh(rboxG(.42,.12,.06,.03),carLightMats.tail);t.position.set(s*.6,.82,2.35);g.add(t);
     const m=new THREE.Mesh(rboxG(.06,.1,.18,.03),pm);m.position.set(s*.93,1.05,-.72);g.add(m);}
   g.add(bx(1.0,.18,.05,0,0,.55,-2.39,chromeMat));
+  g.add(blobShadow());
   if(taxi){const sign=new THREE.Mesh(rboxG(.6,.2,.25,.04),new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xfff2b0,emissiveIntensity:.2}));sign.position.set(0,1.58,.4);g.add(sign);g.userData.taxiSign=sign.material;}
   return g;
 }

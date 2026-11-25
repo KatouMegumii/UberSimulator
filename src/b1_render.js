@@ -109,17 +109,22 @@ const POST={on:true};
   POST.rtA=new THREE.WebGLRenderTarget(1,1,p);POST.rtB=new THREE.WebGLRenderTarget(1,1,p);
   POST.rtA2=new THREE.WebGLRenderTarget(1,1,p);POST.rtB2=new THREE.WebGLRenderTarget(1,1,p);
   const vs=`varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`;
-  POST.bright=new THREE.ShaderMaterial({uniforms:{t:{value:null},th:{value:1}},vertexShader:vs,fragmentShader:`uniform sampler2D t;uniform float th;varying vec2 vUv;void main(){vec3 c=texture2D(t,vUv).rgb;float l=max(c.r,max(c.g,c.b));gl_FragColor=vec4(c*smoothstep(th,th*1.8,l),1.);}`,depthTest:false});
+  POST.bright=new THREE.ShaderMaterial({uniforms:{t:{value:null},th:{value:1}},vertexShader:vs,fragmentShader:`uniform sampler2D t;uniform float th;varying vec2 vUv;void main(){vec3 c=texture2D(t,vUv).rgb;c=clamp(c,0.,64.);if(c.r!=c.r||c.g!=c.g||c.b!=c.b)c=vec3(0.);float l=max(c.r,max(c.g,c.b));gl_FragColor=vec4(c*smoothstep(th,th*1.8,l),1.);}`,depthTest:false});
   POST.blur=new THREE.ShaderMaterial({uniforms:{t:{value:null},dir:{value:new THREE.Vector2()}},vertexShader:vs,fragmentShader:`uniform sampler2D t;uniform vec2 dir;varying vec2 vUv;void main(){vec3 c=texture2D(t,vUv).rgb*.227;c+=texture2D(t,vUv+dir*1.385).rgb*.316;c+=texture2D(t,vUv-dir*1.385).rgb*.316;c+=texture2D(t,vUv+dir*3.231).rgb*.07;c+=texture2D(t,vUv-dir*3.231).rgb*.07;gl_FragColor=vec4(c,1.);}`,depthTest:false});
   POST.comp=new THREE.ShaderMaterial({uniforms:{t:{value:null},b1:{value:null},b2:{value:null},str:{value:.6},vig:{value:.35},tired:{value:0},time:{value:0},exp:{value:1}},vertexShader:vs,
     fragmentShader:`uniform sampler2D t,b1,b2;uniform float str,vig,tired,time,exp;varying vec2 vUv;
     float h(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
     void main(){vec2 uv=vUv;if(tired>0.){uv+=vec2(sin(time*1.3+uv.y*4.),cos(time*1.1))*.004*tired;}
-     vec3 c=texture2D(t,uv).rgb;if(tired>.3){c=mix(c,(texture2D(t,uv+vec2(.006,0)).rgb+texture2D(t,uv-vec2(.006,0)).rgb)*.5,tired*.6);}
+     vec2 dc=(uv-.5)*.0016*(1.+tired*3.);vec3 c=vec3(texture2D(t,uv+dc).r,texture2D(t,uv).g,texture2D(t,uv-dc).b);if(tired>.3){c=mix(c,(texture2D(t,uv+vec2(.006,0)).rgb+texture2D(t,uv-vec2(.006,0)).rgb)*.5,tired*.6);}
      c+=(texture2D(b1,uv).rgb*.6+texture2D(b2,uv).rgb*.9)*str;
      c*=exp;
      c=c*(2.51*c+.03)/(c*(2.43*c+.59)+.14);
      c=pow(clamp(c,0.,1.),vec3(1./2.2));
+     float L=dot(c,vec3(.2126,.7152,.0722));
+     c=mix(vec3(L),c,1.08);
+     c=mix(c,c*c*(3.-2.*c),.22);
+     c+=vec3(-.012,.004,.02)*(1.-smoothstep(0.,.5,L))+vec3(.028,.012,-.012)*smoothstep(.5,1.,L);
+     c=clamp(c,0.,1.);
      float d=distance(vUv,vec2(.5));c*=1.-smoothstep(.35,.85,d)*(vig+tired*.6);
      c+=(h(vUv*1000.+time)-.5)*.025;
      gl_FragColor=vec4(c,1.);}`,depthTest:false});
