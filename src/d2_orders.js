@@ -13,10 +13,10 @@ function zoneW(h){
 }
 const isNight=t=>{const h=(t%1440)/60;return h>=23||h<5;};
 // 快车计价：起步 ¥14（含 3 公里），里程 2.5/km（夜间 3.0），时长 0.5/分钟，15 公里以上远途费 1/km
-function fareOf(km,min,t,extra=0){const night=isNight(t),base=14,dist=Math.max(0,km-3)*(night?3:2.5),dur=min*.5,far=Math.max(0,km-15)*1;
+function fareOf(km,min,t,extra=0){const night=isNight(t),base=14,dist=Math.max(0,km-3)*(night?3:2.5),dur=min*.1,far=Math.max(0,km-15)*1;
   const total=Math.round((base+dist+dur+far+extra)*100)/100;return{base,dist:Math.round(dist*100)/100,dur:Math.round(dur*100)/100,far:Math.round(far*100)/100,extra,total,night};}
 const FEE_RATE=.2;
-function estMinutes(len){return Math.ceil(len/8.5);}
+function estMinutes(len){return Math.ceil(len/8.5*TR);}
 function mkOrder(type,pickup,drop,extra={}){
   const far=drop===PLACES.exit.spot;
   const path=findRoute(pickup,drop),len=routeLen(path),km=far?rand(18,22):len*KM/1000;
@@ -26,12 +26,12 @@ function mkOrder(type,pickup,drop,extra={}){
     pickName:placeName(pickup),dropName:far?PLACES.exit.name:placeName(drop),est:est.total,estNet:Math.round(est.total*(extra.private?1:1-FEE_RATE)*100)/100,
     tail:extra.tail||tail4(),pName:(extra.pName||pick(SURN)+pick(['先生','女士'])),npc:extra.npc||null,kind:extra.kind||null,private:!!extra.private,bonus:extra.bonus||0,
     expire:15,comp:extra.comp||0,resvT:extra.resvT||null,wrong:!extra.npc&&!extra.private&&Math.random()<.08,noShow:!extra.npc&&Math.random()<.04,
-    tag:extra.tag||(far?'远途':(isNight(S.t)&&zoneOf(pickup.x)==='night')?'夜场':''),bumps:0};
+    tag:extra.tag||(far?'远途':(isNight(S.t)&&zoneOf(pickup.x,pickup.z)==='night')?'夜场':''),bumps:0};
   return o;
 }
 // ---- 实时派单 ----
 function maybeOffer(){
-  const h=hourOf(),zw=zoneW(h);let rate=baseRate(h)*(.55+zw.p[ZI[zoneOf(car.x)]]*1.3)*(.6+S.score/200);
+  const h=hourOf(),zw=zoneW(h);let rate=baseRate(h)*(.55+zw.p[ZI[zoneOf(car.x,car.z)]]*1.3)*(.6+S.score/200);
   if(S.energy<15)rate*=.5;
   if(S.queue.some(r=>r.resvT-S.t<40))return;
   if(Math.random()>rate)return;
@@ -48,7 +48,7 @@ function skipOffer(){if(!S.offer)return;S.offer=null;S.offerCd=5;S.stats.skipped
 function startOrder(o){
   o.phase='toPickup';o.acceptT=S.t;o.pickDdl=o.resvT?o.resvT+10:S.t+estMinutes(o.appr)+4;S.order=o;
   const sw=sidewalkOf(o.pickup);
-  o.pMesh=o.npc==='lin'?makeLin():makePerson();o.pMesh.position.set(sw.x,.15,sw.z);o.pMesh.lookAt(o.pickup.x,.15,o.pickup.z);scene.add(o.pMesh);
+  o.pMesh=o.npc==='lin'?makeLin():makePedVisual();o.pMesh.position.set(sw.x,.15,sw.z);o.pMesh.lookAt(o.pickup.x,.15,o.pickup.z);scene.add(o.pMesh);
   if(o.npc==='lin')L.rideShift=shiftKey();
   mkPick.position.set(o.pickup.x,0,o.pickup.z);mkPick.visible=true;mkDrop.visible=false;
   setRoute(o.pickup);voice(o.resvT?'预约行程开始，请前往上车点':'请前往上车点接乘客');openApp('didi','trip',true);ping(784);
@@ -101,6 +101,7 @@ function driverTick(){
   if(o&&o.phase==='toDrop'&&S.t===o.dropDdl)voice('已超过预计送达时间');
 }
 function setOnline(v){
+  if(v&&typeof LAW!=='undefined'&&LAW.study.need){toast('驾驶证已记满 12 分，完成满分学习前不能出车','warn');return;}
   if(v&&S.locked){toast('车辆已被车行限制接单，先补缴车租。','warn');return;}
   if(v&&S.loc!=='car')return;
   S.online=v;if(!v){S.offer=null;}else{S.offerCd=2;S.hallT=S.t;hallRefresh();}
@@ -115,7 +116,7 @@ function arrivePickup(){
   const o=S.order;o.phase='waiting';o.arriveT=S.t;mkPick.visible=false;setRoute(null);
   const late=S.t-o.pickDdl;if(late>0){S.stats.late++;S.score=clamp(S.score-1,60,100);o.lateP=late;notify('didi','滴滴车主',`接驾迟到 ${late} 分钟，服务分 -1`);}
   voice('已到达上车点，请等待乘客');
-  if(!o.noShow){o.walk=o.wrong?'wrong':'pax';if(o.wrong){o.wMesh=makePerson();o.wMesh.position.copy(o.pMesh.position).add(new THREE.Vector3(1.2,0,1.2));scene.add(o.wMesh);}}
+  if(!o.noShow){o.walk=o.wrong?'wrong':'pax';if(o.wrong){o.wMesh=makePedVisual();o.wMesh.position.copy(o.pMesh.position).add(new THREE.Vector3(1.2,0,1.2));scene.add(o.wMesh);}}
   openApp('didi','trip',true);
 }
 function paxWalk(dt){const o=S.order;if(!o||o.phase!=='waiting'||!o.walk)return;
@@ -154,7 +155,7 @@ function arriveDrop(){
   o.fee=o.private?0:Math.round(o.bill.total*FEE_RATE*100)/100;o.net=Math.round((o.bill.total-o.fee)*100)/100;
   let stars=5;if(o.lateP>3)stars--;if(S.t>o.dropDdl)stars--;stars-=Math.min(2,o.bumps);if(o.npc==='lin')stars=5;o.stars=clamp(stars,1,5);
   voice('已到达目的地，请提醒乘客带好随身物品');door2();clearRearPax();
-  const sw=sidewalkOf(o.drop);const p=o.npc==='lin'?makeLin():makePerson();p.position.set(sw.x,.15,sw.z);scene.add(p);setTimeout(()=>scene.remove(p),9000);
+  const sw=sidewalkOf(o.drop);const p=o.npc==='lin'?makeLin():makePedVisual();p.position.set(sw.x,.15,sw.z);scene.add(p);setTimeout(()=>scene.remove(p),9000);
   if(o.npc==='lin')linRideEnd(o);
   openApp('didi','trip',true);
 }
@@ -164,18 +165,24 @@ function confirmBill(){
   S.score=clamp(S.score+(o.stars===5?.4:o.stars===4?0:-1),60,100);
   toast(`本单收入 <b>+¥${o.net.toFixed(2)}</b>　乘客评价 ${'★'.repeat(o.stars)}${'☆'.repeat(5-o.stars)}`,'money');ching();
   S.offerCd=3;
-  if(o.far)fadeTo('送客上外环……空驶返回桥西',()=>{advance(55);S.energy=Math.max(0,S.energy-4);car.x=-293;car.z=203;car.h=-Math.PI/2;car.speed=0;logEv('跑了一趟远途 +¥'+o.net.toFixed(0));});
+  if(o.far)fadeTo('送客上外环……空驶返回桥西',()=>{advance(55);S.energy=Math.max(0,S.energy-4);{const p=curbSpot(PLACES.home.spot.x+rand(-400,400),PLACES.home.spot.z+rand(-400,400));car.x=p.x;car.z=p.z;car.h=p.h;car.speed=0;}logEv('跑了一趟远途 +¥'+o.net.toFixed(0));});
   activateQueued();openApp('didi','home',true);
 }
 // ================= 导航 =================
 let ROUTE=null,routeTarget=null,rerouteT=0;
 function setRoute(target){routeTarget=target;ROUTE=target?findRoute(car,target,car.h):null;drawRoute(ROUTE);}
+let _navC=null,_navT=0;
 function navInfo(){
   if(!ROUTE||ROUTE.length<2)return null;
+  const now=performance.now();if(_navC&&now-_navT<120&&_navC.route===ROUTE)return _navC.v;
   let bi=0,bd=1e9;for(let k=0;k<ROUTE.length-1;k++){const r=segDist(car,ROUTE[k],ROUTE[k+1]);if(r.d<bd){bd=r.d;bi=k;}}
-  const remain=dist(car,ROUTE[bi+1])+routeLen(ROUTE.slice(bi+1));const v=ROUTE[bi+1],dTo=dist(car,v);
-  if(bi+1>=ROUTE.length-1)return{off:bd,arrow:'◎',dist:dTo,text:'到达'+(S.order?(S.order.phase==='toPickup'?'上车点':'目的地'):''),remain,road:''};
-  const a=ROUTE[bi],c=ROUTE[bi+2],d1x=v.x-a.x,d1z=v.z-a.z,d2x=c.x-v.x,d2z=c.z-v.z,cr=d1x*d2z-d1z*d2x,dot=d1x*d2x+d1z*d2z;
-  let arrow='↑',txt='直行';if(Math.abs(cr)>1e-3){if(cr>0){arrow='↱';txt='右转';}else{arrow='↰';txt='左转';}}else if(dot<0){arrow='⤺';txt='掉头';}
-  const road=roadNameOfSeg(v,c);return{off:bd,arrow,dist:dTo,text:txt+' 进入 '+road,remain,road,cur:roadNameOfSeg(a,v)};
+  const remain=dist(car,ROUTE[bi+1])+routeLen(ROUTE.slice(bi+1));
+  let acc=dist(car,ROUTE[bi+1]),res=null;
+  for(let k=bi+1;k<ROUTE.length-1;k++){const a=ROUTE[k-1],v=ROUTE[k],c=ROUTE[k+1];const d1x=v.x-a.x,d1z=v.z-a.z,d2x=c.x-v.x,d2z=c.z-v.z,L1=Math.hypot(d1x,d1z)||1,L2=Math.hypot(d2x,d2z)||1;
+    const sn=(d1x*d2z-d1z*d2x)/(L1*L2),cs=(d1x*d2x+d1z*d2z)/(L1*L2),ang=Math.atan2(sn,cs);
+    if(Math.abs(ang)>.55&&L2>6&&L1>5){let arrow,txt;if(Math.abs(ang)>2.5){arrow='⤺';txt='掉头';}else if(ang>0){arrow='↱';txt='右转';}else{arrow='↰';txt='左转';}
+      const road=roadNameOfSeg(v,c);res={off:bd,arrow,dist:acc,text:txt+' 进入 '+road,remain,road};break;}
+    acc+=L2;}
+  if(!res){const end=ROUTE[ROUTE.length-1];res={off:bd,arrow:remain<60?'◎':'↑',dist:remain,text:'到达'+(S.order?(S.order.phase==='toPickup'?'上车点':'目的地'):''),remain,road:remain<60?'到达':roadNameOfSeg(ROUTE[bi],ROUTE[bi+1])};}
+  _navC={route:ROUTE,v:res};_navT=now;return res;
 }

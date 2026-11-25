@@ -1,6 +1,6 @@
 """OSM raw tiles → assets/map/map.json（局部米制坐标，x 向东，z 向南）"""
 import json, glob, math, collections, random, os, hashlib
-OUT = '/sessions/zealous-loving-wright/mnt/outputs/github-pages/assets/map/map.json'
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'assets', 'map', 'map.json')
 LAT0, LON0 = 31.215, 121.4375
 KX = math.cos(math.radians(LAT0)) * 111320.0
 KZ = 110540.0

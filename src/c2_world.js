@@ -1,44 +1,4 @@
 
-// ================= 交通车流（会等红灯）=================
-const AI=[];
-const AICOL=['#e8e8e6','#1c1d20','#8a8f96','#2b4a7a','#7a1f1f','#d8d4c8','#3a4a3a','#5a5f66','#b9b3a6','#e8e8e6','#1c1d20'];
-function spawnAI(ax,line,dir,lane,pos,elev){
-  const r=Math.random(),kind=r<.18?'taxi':r<.38?'suv':'sedan';const g=makeCar(pick(AICOL),kind);scene.add(g);
-  const off=(lane===0?1.9:5.2);const lat=ax==='x'?line+(dir>0?off:-off):line+(dir>0?-off:off);
-  AI.push({g,ax,lat,dir,pos,speed:rand(7,11),vmax:rand(9,13.5),elev:!!elev});
-}
-for(let k=0;k<30;k++){const ax=Math.random()<.5?'x':'z';spawnAI(ax,R[randi(0,6)],Math.random()<.5?1:-1,randi(0,1),rand(-300,300));}
-for(let k=0;k<8;k++)spawnAI('x',-200,Math.random()<.5?1:-1,randi(0,1),rand(-330,330),true);
-function nextStop(a){for(let k=0;k<7;k++){const c=a.dir>0?R[k]:R[6-k];const line=c-a.dir*(HW+3);const d=(line-a.pos)*a.dir;if(d>-.5)return d;}return 1e9;}
-function aiUpdate(dt){
-  for(const a of AI){
-    let target=a.vmax;
-    if(!a.elev){
-      const pa=a.ax==='x'?car.x:car.z,pl=a.ax==='x'?car.z:car.x,ahead=(pa-a.pos)*a.dir;
-      if(Math.abs(pl-a.lat)<2.3&&ahead>0&&ahead<13)target=Math.min(target,Math.max(0,(ahead-6)*.8));
-      for(const b of AI){if(b===a||b.elev||b.ax!==a.ax||Math.abs(b.lat-a.lat)>1||b.dir!==a.dir)continue;const d=(b.pos-a.pos)*a.dir;if(d>0&&d<14)target=Math.min(target,Math.max(0,(d-6.5)*.9));}
-      const st=SIG.now[a.ax],d=nextStop(a);
-      if(st!=='g'&&d<35&&!(st==='y'&&d<7))target=Math.min(target,Math.max(0,d*.45));
-    }
-    a.speed+=(target-a.speed)*Math.min(1,dt*(target<a.speed?3.5:1));a.pos+=a.dir*a.speed*dt;
-    const W=a.elev?340:318;if(a.pos>W)a.pos=-W;if(a.pos<-W)a.pos=W;
-    const y=a.elev?10.4:0;
-    if(a.ax==='x'){a.g.position.set(a.pos,y,a.lat);a.g.rotation.y=a.dir>0?-Math.PI/2:Math.PI/2;}else{a.g.position.set(a.lat,y,a.pos);a.g.rotation.y=a.dir>0?Math.PI:0;}
-    if(a.m){a.m.position.copy(a.g.position);a.m.rotation.y=a.g.rotation.y;}
-    if(!a.elev){const dx=car.x-a.g.position.x,dz=car.z-a.g.position.z,d=Math.hypot(dx,dz);
-      if(d<2.6&&d>.01){const push=2.6-d;car.x+=dx/d*push;car.z+=dz/d*push;if(!legal(car.x,car.z)){car.x-=dx/d*push;car.z-=dz/d*push;}if(Math.abs(car.speed)>2.5){bump('和别的车蹭了一下');car.shake=1;}car.speed*=-.25;}}
-  }
-}
-// ================= 行人 =================
-const PEDS=[];
-for(let k=0;k<70;k++){const i=randi(0,5),j=randi(0,5),cx=-250+100*i,cz=-250+100*j,e=randi(0,3),g=makePerson();scene.add(g);
-  const fixed=[cz-39.8,cz+39.8,cx-39.8,cx+39.8][e]+rand(-.6,.6),ax=e<2?'x':'z',c=ax==='x'?cx:cz;
-  PEDS.push({g,ax,fixed,a0:c-37,a1:c+37,pos:c+rand(-37,37),dir:Math.random()<.5?1:-1,spd:rand(1,1.5),stop:0});}
-function pedUpdate(dt){for(const p of PEDS){
-  const near=Math.abs(p.g.position.x-car.x)+Math.abs(p.g.position.z-car.z)<120;p.g.visible=near;if(!near){p.pos+=p.dir*p.spd*dt;if(p.pos>p.a1||p.pos<p.a0)p.dir*=-1;continue;}
-  if(p.stop>0){p.stop-=dt;animPerson(p.g,dt,false);}else{p.pos+=p.dir*p.spd*dt;if(Math.random()<.001)p.stop=rand(2,6);animPerson(p.g,dt,true);}
-  if(p.pos>p.a1||p.pos<p.a0){p.dir*=-1;p.pos=clamp(p.pos,p.a0,p.a1);}
-  if(p.ax==='x'){p.g.position.set(p.pos,.15,p.fixed);p.g.rotation.y=p.dir>0?-Math.PI/2:Math.PI/2;}else{p.g.position.set(p.fixed,.15,p.pos);p.g.rotation.y=p.dir>0?Math.PI:0;}}}
 // ================= 订单标记与导航线 =================
 function makeMarker(color){const g=new THREE.Group();
   const beam=new THREE.Mesh(new THREE.CylinderGeometry(.9,.9,40,20,1,true),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.18,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));beam.position.y=20;g.add(beam);
@@ -107,13 +67,19 @@ function envUpdate(){
   scene.fog.color.copy(_c2).multiplyScalar(lerp(1,.6,NIGHT));scene.fog.near=lerp(90,40,NIGHT);scene.fog.far=lerp(800,520,NIGHT);
   const cx=S.loc==='car'?car.x:0,cz=S.loc==='car'?car.z:0;
   sun.position.set(cx+sd.x*220,sd.y*220,cz+sd.z*220);sun.target.position.set(cx,0,cz);
-  sun.intensity=Math.max(0,day)*2.4*(1-NIGHT);sun.color.setHSL(.09,.7,lerp(.62,.95,clamp(day*2,0,1)));sun.castShadow=day>.02;
-  hemi.intensity=lerp(.55,.12,NIGHT);hemi.color.copy(_c2).lerp(new THREE.Color(0x8aa0c8),.4);
+  sun.intensity=Math.max(0,day)*(USE_HDR?3.1:2.4)*(1-NIGHT);sun.color.setHSL(.09,.7,lerp(.62,.95,clamp(day*2,0,1)));sun.castShadow=day>.02;
+  hemi.intensity=USE_HDR?lerp(.12,.06,NIGHT):lerp(.55,.12,NIGHT);hemi.color.copy(_c2).lerp(new THREE.Color(0x8aa0c8),.4);
   const ek=NIGHT>.6?'night':DUSK>.5||NIGHT>.25?'dusk':'day';scene.environment=ek==='night'?ENV0.night:ENV[ek];
-  if(USE_HDR&&BG[ek]){scene.background=BG[ek];scene.backgroundIntensity=ek==='night'?1.2:ek==='dusk'?1.1:1;const hi=HDRI[ek];scene.fog.color.copy(hi.fog).multiplyScalar(ek==='night'?.18:ek==='dusk'?.8:1);
+  if(USE_HDR&&BG[ek]){const wN=NIGHT,wK=clamp(DUSK*1.4,0,1)*(1-NIGHT),wD=Math.max(0,1-wN-wK);
+    if(!window.SKYB){const m=new THREE.ShaderMaterial({uniforms:{tD:{value:BG.day},tK:{value:BG.dusk||BG.day},tN:{value:BG.night||BG.day},w:{value:new THREE.Vector3(1,0,0)},ex:{value:1}},side:THREE.BackSide,depthWrite:false,fog:false,
+      vertexShader:'varying vec3 vW;void main(){vec4 p=modelMatrix*vec4(position,1.);vW=p.xyz-cameraPosition;gl_Position=projectionMatrix*viewMatrix*p;gl_Position.z=gl_Position.w*.99999;}',
+      fragmentShader:'uniform sampler2D tD,tK,tN;uniform vec3 w;uniform float ex;varying vec3 vW;vec2 eq(vec3 d){return vec2(atan(d.z,d.x)*.15915494+.5,asin(clamp(d.y,-1.,1.))*.31830989+.5);}void main(){vec3 d=normalize(vW);vec2 uv=eq(d);vec3 c=texture2D(tD,uv).rgb*w.x+texture2D(tK,uv).rgb*w.y+texture2D(tN,uv).rgb*w.z;gl_FragColor=vec4(c*ex,1.);}'});
+      window.SKYB=new THREE.Mesh(new THREE.SphereGeometry(1400,48,24),m);SKYB.frustumCulled=false;SKYB.renderOrder=-10;scene.add(SKYB);scene.background=null;}
+    SKYB.position.copy(camera.getWorldPosition(new THREE.Vector3()));SKYB.material.uniforms.w.value.set(wD,wK,wN*1.15);SKYB.material.uniforms.ex.value=lerp(1,.9,NIGHT);
+    const fo=new THREE.Color(0,0,0);fo.add(HDRI.day.fog.clone().multiplyScalar(wD));if(HDRI.dusk)fo.add(HDRI.dusk.fog.clone().multiplyScalar(wK*.8));if(HDRI.night)fo.add(HDRI.night.fog.clone().multiplyScalar(wN*.18));scene.fog.color.copy(fo);const hi=HDRI[ek];
     if(ek!=='night'&&hi.sun.y>.04){sun.position.set(cx+hi.sun.x*220,hi.sun.y*220,cz+hi.sun.z*220);}scene.environmentIntensity=1;}
   for(const m of BMATS)m.emissiveIntensity=NIGHT*(m.userData.kind==='glass'?.28:.75);
-  lampHeadMat.emissiveIntensity=NIGHT*2.5;poolMat.opacity=NIGHT*.5;glowMat.opacity=NIGHT*.9;
+  lampHeadMat.emissiveIntensity=NIGHT*2.5;poolMat.opacity=NIGHT*.5;glowMat.opacity=NIGHT*.5;
   for(const m of SIGNMATS)m.emissiveIntensity=lerp(.12,m.userData.neon?3.2:1.4,NIGHT);
   for(const m of INT_MATS)m.emissiveIntensity=lerp(.25,1.5,NIGHT);
   towerGlow.emissiveIntensity=NIGHT*2.5;if(typeof carModelLights==='function')carModelLights();

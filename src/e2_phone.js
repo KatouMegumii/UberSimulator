@@ -1,20 +1,19 @@
 
 // ================= 手机系统 =================
-const APPS={didi:{name:'滴滴车主',ic:'D',bg:'linear-gradient(135deg,#ff9a3c,#ff6a00)'},bank:{name:'申城银行',ic:'银',bg:'linear-gradient(135deg,#d8333f,#a51624)'},ths:{name:'同花顺',ic:'同',bg:'linear-gradient(135deg,#e8402a,#c41a12)'},msg:{name:'信息',ic:'信',bg:'linear-gradient(135deg,#4cd964,#2ab14a)'}};
+const APPS={didi:{name:'滴滴车主',ic:'D',bg:'linear-gradient(135deg,#ff9a3c,#ff6a00)'},bank:{name:'申城银行',ic:'银',bg:'linear-gradient(135deg,#d8333f,#a51624)'},ths:{name:'同花顺',ic:'同',bg:'linear-gradient(135deg,#e8402a,#c41a12)'},msg:{name:'信息',ic:'信',bg:'linear-gradient(135deg,#4cd964,#2ab14a)'},jg:{name:'交管12123',ic:'交',bg:'linear-gradient(135deg,#2a7be8,#1554c0)'},ev:{name:'特来电',ic:'电',bg:'linear-gradient(135deg,#19b6f0,#0068b7)'}};
 let phoneT=0,postRender=[];
-function openApp(app,page,soft){if(soft&&UI.app&&UI.app!==app&&!['didi'].includes(app)){renderPhone(true);return;}UI.app=app;if(page)UI.page=page;else UI.page=({didi:'home',bank:'home',ths:'market',msg:null})[app];if(app==='msg')UI.thread=null;renderPhone(true);}
+function openApp(app,page,soft){if(soft&&UI.app&&UI.app!==app&&!['didi'].includes(app)){renderPhone(true);return;}UI.app=app;if(page)UI.page=page;else UI.page=({didi:'home',bank:'home',ths:'market',msg:null,jg:'home',ev:'home'})[app];if(app==='msg')UI.thread=null;renderPhone(true);}
 function goHome(){UI.app=null;UI.page=null;UI.thread=null;renderPhone(true);}
 function renderPhone(now){if(now)doRenderPhone();}
 const moving=()=>S.loc==='car'&&Math.abs(car.speed)>1.5;
-function badge(app){if(app==='msg')return Object.values(S.threads).reduce((a,t)=>a+t.unread,0);if(app==='didi')return S.offer?1:0;return 0;}
+function badge(app){if(app==='msg')return Object.values(S.threads).reduce((a,t)=>a+t.unread,0);if(app==='didi')return S.offer?1:0;if(app==='ev')return EV.debt?1:0;if(app==='jg')return LAW.recs.filter(r=>r.st==='notified'||r.st==='cop').length+LAW.acc.filter(a=>a.st==='open').length;return 0;}
 function doRenderPhone(){
   const scr=$('#pScreen'),st=scr.scrollTop;postRender=[];
   $('#pStatus').innerHTML=`<span>${fmt(S.t)}</span><span class="isl"></span><span>5G ▮▮▮ ${Math.round(S.battery)}%</span>`;
   let h;
   if(S.offer)h=offerView();
   else if(!UI.app)h=homeView();
-  else if(UI.app!=='didi'&&moving())h=`<div class="appbar" style="background:#111"><span>${APPS[UI.app].name}</span></div><div class="locked">🚗<br>驾驶中<br><span class="muted">为了安全，请停车后使用</span></div>`;
-  else h=({didi:didiView,bank:bankView,ths:thsView,msg:msgView})[UI.app]();
+  else h=({didi:didiView,bank:bankView,ths:thsView,msg:msgView,jg:jgView,ev:evView})[UI.app]();
   scr.innerHTML=h;scr.className=UI.app?'app-'+UI.app:'home';
   if(UI.app==='msg'&&UI.thread)scr.scrollTop=1e5;else scr.scrollTop=st;
   for(const f of postRender)f();
@@ -27,7 +26,7 @@ function homeView(){
   <div class="widget"><div class="row"><span>${o?'进行中的订单':nx?'下一个预约':'今日收入'}</span><b>${o?({toPickup:'去接乘客',waiting:'等待乘客',verify:'核验尾号',toDrop:'行程中',settle:'待确认账单'})[o.phase]:nx?fmt(nx.resvT):'¥'+S.wake.net.toFixed(2)}</b></div>
    <div class="row muted"><span>车租 ${r.overdue?'<b style="color:#ff7a7a">已逾期</b>':whenStr(r.due)}</span><span>¥${r.amt}</span></div>
    <div class="row muted"><span>A股 ${STATE_TXT[mState()]}</span><span class="${MK.idx>=MK.idxPrev?'up':'dn'}">${MK.idx.toFixed(2)}</span></div></div>
-  <div class="grid">${icon('didi')}${icon('bank')}${icon('ths')}</div>
+  <div class="grid">${icon('didi')}${icon('bank')}${icon('ths')}${icon('jg')}${icon('ev')}</div>
   <div class="dock">${icon('msg')}</div></div>`;
 }
 // ---- 派单弹窗（滴滴风格）----
@@ -52,7 +51,7 @@ function didiHome(){
   ${S.locked?`<div class="dcard warn">车辆已被车行限制接单，请先补缴车租</div>`:''}
   ${S.order?`<div class="dcard hot" data-act="page" data-arg="trip"><b>进行中：</b>${S.order.phase==='toDrop'?'送 '+S.order.pName+' 去 '+S.order.dropName:'接 '+S.order.pName+' · '+S.order.pickName}<div class="muted">点击查看行程 ›</div></div>`:''}
   <div class="dcard"><div class="row"><span>服务分</span><b>${S.score.toFixed(1)}</b></div><div class="row muted"><span>乘客评分</span><span>${avg} ★</span></div><div class="row muted"><span>接单率</span><span>${rate}%</span></div><div class="row muted"><span>迟到</span><span>${S.stats.late} 次</span></div></div>
-  <div class="dcard"><div class="muted">附近热区</div><b>${hotHint()}</b><div class="muted" style="margin-top:2px">当前位置：${ZN[zoneOf(car.x)]}</div></div>
+  <div class="dcard"><div class="muted">附近热区</div><b>${hotHint()}</b><div class="muted" style="margin-top:2px">当前位置：${(nearestEdge(car.x,car.z,80)||{e:{n:''}}).e.n||'小路'} · ${ZN[zoneOf(car.x,car.z)]}</div></div>
   <button class="go ${S.online?'off':''}" data-act="online">${S.online?'收车':'出车'}<small>${S.online?'听单中…':'按 O 也可以'}</small></button>`;
 }
 function hotHint(){const w=zoneW(hourOf()).p,i=w.indexOf(Math.max(...w));return ZN[ZK[i]];}
@@ -96,19 +95,21 @@ function didiWallet(){
   <div class="sect">收支明细</div><div class="dcard">${S.dtx.slice(0,20).map(x=>`<div class="row"><span>${x.text}<br><span class="muted">${whenStr(x.t)}</span></span><b class="${x.amt>=0?'up2':'dn2'}">${x.amt>=0?'+':''}${x.amt.toFixed(2)}</b></div>`).join('')||'<span class="muted">暂无</span>'}</div>`;
 }
 // ---- 小地图（共用）----
-function drawMiniTo(g,W,H,dark){
-  const span=260,sc=Math.min(W,H)/span,cx=car.x,cz=car.z,P=(x,z)=>[W/2+(x-cx)*sc,H*.58+(z-cz)*sc];
-  g.save();g.fillStyle=dark?'#141820':'#eef0f2';g.fillRect(0,0,W,H);
-  g.translate(W/2,H*.58);g.rotate(car.h);g.translate(-W/2,-H*.58);
-  for(let i=0;i<6;i++)for(let j=0;j<6;j++){const zo=i<2?0:i<4?1:2;g.fillStyle=dark?['#22252b','#1f2430','#272231'][zo]:['#e2ddd2','#dde3ea','#e6dde8'][zo];const[a,b]=P(-293+100*i,-293+100*j);g.fillRect(a,b,86*sc,86*sc);}
-  g.fillStyle=dark?'#14303c':'#a9cfe0';const[rx]=P(320,0);g.fillRect(rx,-H,4000,H*3);
-  g.strokeStyle=dark?'#3a3f49':'#ffffff';g.lineWidth=13*sc;g.lineCap='butt';for(const r of R){let[a,b]=P(-310,r),[c,d]=P(310,r);g.beginPath();g.moveTo(a,b);g.lineTo(c,d);g.stroke();[a,b]=P(r,-310);[c,d]=P(r,310);g.beginPath();g.moveTo(a,b);g.lineTo(c,d);g.stroke();}
-  if(ROUTE){g.strokeStyle='#1fa3ff';g.lineWidth=Math.max(5,6*sc);g.lineJoin='round';g.beginPath();ROUTE.forEach((p,k)=>{const[a,b]=P(p.x,p.z);k?g.lineTo(a,b):g.moveTo(a,b);});g.stroke();}
-  g.font=`bold ${Math.round(16*sc*1.2)}px sans-serif`;g.textAlign='center';g.textBaseline='middle';
-  for(const[k,t,c]of[['shop','面','#ff6a4f'],['home','家','#4f8fff'],['bar','酒','#a96aff']]){const[a,b]=P(PLACES[k].spot.x,PLACES[k].spot.z);g.fillStyle=c;g.beginPath();g.arc(a,b,10*sc*1.3,0,7);g.fill();g.fillStyle='#fff';g.fillText(t,a,b+1);}
-  if(S.order){const o=S.order;for(const[p,c,show]of[[o.pickup,'#21c065',o.phase==='toPickup'],[o.drop,'#ff7a1a',o.phase!=='settle']]){if(!show)continue;const[a,b]=P(p.x,p.z);g.fillStyle=c;g.beginPath();g.arc(a,b,9,0,7);g.fill();g.strokeStyle='#fff';g.lineWidth=2;g.stroke();}}
+function drawMiniTo(g,W,H,dark,span=340,oyf=.6){
+  const sc=Math.min(W,H)/span,cx=car.x,cz=car.z,oy=H*oyf,P=(x,z)=>[W/2+(x-cx)*sc,oy+(z-cz)*sc];
+  g.save();g.fillStyle=dark?'#151a20':'#e9ebee';g.fillRect(0,0,W,H);
+  g.translate(W/2,oy);g.rotate(car.h);g.translate(-W/2,-oy);
+  const R2=span*.9,seen=new Set();const c0x=Math.floor((cx-R2)/GC),c1x=Math.floor((cx+R2)/GC),c0z=Math.floor((cz-R2)/GC),c1z=Math.floor((cz+R2)/GC);
+  for(let ix=c0x;ix<=c1x;ix++)for(let iz=c0z;iz<=c1z;iz++){const L=GIX.get(gkey(ix,iz));if(L)for(const v of L)seen.add(v>>10);}
+  const es=[...seen].map(i=>RE[i]).sort((a,b)=>b.c-a.c);
+  for(const pass of[0,1])for(const e of es){g.strokeStyle=pass?(dark?(e.c<=2?'#d7dbe0':'#7d858e'):(e.c<=2?'#ffe9a8':'#ffffff')):(dark?'#0d1014':'#c9ccd2');g.lineWidth=Math.max(2,e.w*sc)+(pass?0:2.5);g.lineCap='round';g.lineJoin='round';
+    g.beginPath();e.pts.forEach((p,k)=>{const[a,b]=P(p.x,p.z);k?g.lineTo(a,b):g.moveTo(a,b);});g.stroke();}
+  if(ROUTE){g.strokeStyle=dark?'#ffb547':'#1fa3ff';g.lineWidth=Math.max(5,7*sc);g.beginPath();ROUTE.forEach((p,k)=>{const[a,b]=P(p.x,p.z);k?g.lineTo(a,b):g.moveTo(a,b);});g.stroke();}
+  g.font=`bold ${Math.round(13*Math.max(1,sc*1.4))}px sans-serif`;g.textAlign='center';g.textBaseline='middle';
+  for(const[k,t,c]of[['shop','面','#ff6a4f'],['home','家','#4f8fff'],['bar','酒','#a96aff']]){const[a,b]=P(PLACES[k].spot.x,PLACES[k].spot.z);g.fillStyle=c;g.beginPath();g.arc(a,b,9*Math.max(1,sc*1.3),0,7);g.fill();g.fillStyle='#fff';g.fillText(t,a,b+1);}
+  if(S.order){const o=S.order;for(const[p,c,show]of[[o.pickup,'#21c065',o.phase==='toPickup'],[o.drop,'#ff7a1a',o.phase!=='settle']]){if(!show)continue;const[a,b]=P(p.x,p.z);g.fillStyle=c;g.beginPath();g.arc(a,b,8,0,7);g.fill();g.strokeStyle='#fff';g.lineWidth=2;g.stroke();}}
   g.restore();
-  g.save();g.translate(W/2,H*.58);g.fillStyle='#1f7bff';g.strokeStyle='#fff';g.lineWidth=3;g.beginPath();g.moveTo(0,-14);g.lineTo(10,10);g.lineTo(0,5);g.lineTo(-10,10);g.closePath();g.fill();g.stroke();g.restore();
+  g.save();g.translate(W/2,oy);g.fillStyle=dark?'#ffffff':'#1f7bff';g.strokeStyle=dark?'#151a20':'#fff';g.lineWidth=3;g.beginPath();g.moveTo(0,-13);g.lineTo(9,10);g.lineTo(0,5);g.lineTo(-9,10);g.closePath();g.fill();g.stroke();g.restore();
 }
 // ---- 信息 ----
 function msgView(){
@@ -128,4 +129,4 @@ function linProfile(){const st=linStage();
 let bannerT=null;
 function phoneBanner(n){const b=$('#pBanner');const a=APPS[n.app]||APPS.msg;b.innerHTML=`<div class="ico s" style="background:${a.bg}">${a.ic}</div><div style="min-width:0;flex:1"><div class="row"><b>${n.title}</b><span class="muted">现在</span></div><div class="ell2">${n.text}</div></div>`;b.dataset.app=n.app;b.classList.add('on');clearTimeout(bannerT);bannerT=setTimeout(()=>b.classList.remove('on'),3800);
   if(UI.phone==='mount'&&S.loc==='car')toast(`<b>${n.title}</b>　${n.text.length>40?n.text.slice(0,40)+'…':n.text}`,n.app==='bank'?'money':'');}
-function voice(t){if(S.started&&!S.asleep)toast('🔊 '+t,'voice');if(window.speechSynthesis&&S.started&&!S.asleep&&UI.voice){try{const u=new SpeechSynthesisUtterance(t);u.lang='zh-CN';u.rate=1.15;u.volume=.8;speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}}
+function voice(t){if(S.started&&!S.asleep)toast('<span class="vt">播报</span>'+t,'voice');if(window.speechSynthesis&&S.started&&!S.asleep&&UI.voice){try{const u=new SpeechSynthesisUtterance(t);u.lang='zh-CN';u.rate=1.15;u.volume=.8;speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}}
