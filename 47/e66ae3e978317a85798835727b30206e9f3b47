@@ -1,0 +1,21 @@
+src/a_head.html
+  s_f7cf7a80e06fbb::t_b7ac76b4edd036 7-9
+index.html
+  s_f7cf7a80e06fbb::t_437630152109fe 7-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "47e66ae3e978317a85798835727b30206e9f3b47",
+  "prompts": {},
+  "sessions": {
+    "s_f7cf7a80e06fbb": {
+      "agent_id": {
+        "tool": "deepseekharness",
+        "id": "session-4ad009c9-a59f-4e23-8848-101a04f7189e",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "Yi Ding <98372789+KatouMegumii@users.noreply.github.com>"
+    }
+  }
+}
