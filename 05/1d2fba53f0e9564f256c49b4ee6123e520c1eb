@@ -1,0 +1,21 @@
+.github/workflows/pages.yml
+  s_f7cf7a80e06fbb::t_2f9f8680600eca 1-52
+README.md
+  s_f7cf7a80e06fbb::t_656506e06228e1 31-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "051d2fba53f0e9564f256c49b4ee6123e520c1eb",
+  "prompts": {},
+  "sessions": {
+    "s_f7cf7a80e06fbb": {
+      "agent_id": {
+        "tool": "deepseekharness",
+        "id": "session-4ad009c9-a59f-4e23-8848-101a04f7189e",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "Yi Ding <98372789+KatouMegumii@users.noreply.github.com>"
+    }
+  }
+}
