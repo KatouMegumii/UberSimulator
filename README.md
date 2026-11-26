@@ -28,6 +28,25 @@ open dist/桥西夜班/index.html
 
 改地图时先运行 `python3 tools/osm/fetch.py`（需要联网访问 Overpass API），再运行 `python3 tools/osm/build_map.py`。
 
+## 在线发布（GitHub Pages）
+
+**https://katoumegumii.github.io/UberSimulator/**
+
+线上版本不由仓库里的文件直接发布，而是由 [`.github/workflows/pages.yml`](.github/workflows/pages.yml)
+在 CI 里现场跑 `python3 build.py`，再把 `dist/桥西夜班/` 作为 Pages 产物部署：
+
+```
+push main → Actions: build.py → dist/site → upload-pages-artifact → deploy-pages
+```
+
+所以：
+
+- `dist/` 不要提交，`.gitignore` 已排除；本地构建产物和线上不必一致。
+- **只有提交并推送的改动才会发布**，工作区里未提交的修改不会上线。
+- 只想预览本地改动：`python3 build.py && open dist/桥西夜班/index.html`。
+- 注意首屏要下载全部 `assets/pack/*.js`（约 144MB）。首次打开较慢，之后靠浏览器缓存。
+  要走"直接加载原始资源、按需下载"的轻量版，需要另做一套资源加载路径（`z_boot.html` 目前只认 `__pack`）。
+
 ## 署名
 
 - 地图数据：© OpenStreetMap contributors，ODbL

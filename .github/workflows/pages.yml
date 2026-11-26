@@ -1,0 +1,52 @@
+name: Deploy to GitHub Pages
+
+# 仓库根目录只放源码（src/ + assets/ + vendor/），产物由 CI 现场构建，
+# 不把 dist/（~144MB）提交进 git。
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build dist
+        run: python3 build.py
+
+      # 产物目录名是中文（dist/桥西夜班），改成 ASCII 再交给 Pages action，
+      # 避免 tar / artifact 环节对非 ASCII 路径的兼容问题。
+      - name: Stage site
+        run: |
+          mv "dist/桥西夜班" dist/site
+          ls -la dist/site
+          du -sh dist/site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
