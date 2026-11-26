@@ -1,0 +1,28 @@
+.github/workflows/pages.yml
+  s_f7cf7a80e06fbb::t_69797a287bee57 29-30,34-35,39
+README.md
+  s_f7cf7a80e06fbb::t_ee93228e8f8843 35-45,48,54-56
+build.py
+  s_f7cf7a80e06fbb::t_6ed2d5341114f2 2,4-5,7-11,15-17,23,31,35-43,45-61,64-84,89,96,102-110,112-116,119-123
+src/z_boot.html
+  s_f7cf7a80e06fbb::t_b3c395a8555014 16-18
+  s_f7cf7a80e06fbb::t_c04ed27796a642 5-7,10,12-13,25-26,36-39,41-42,44,46,54
+  s_f7cf7a80e06fbb::t_9ffe296961f357 23,48
+  s_f7cf7a80e06fbb::t_3e6dc18e2ea551 34-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "1d9afe0624fbb0109b3fe5a0f6edc7e5b1e05a40",
+  "prompts": {},
+  "sessions": {
+    "s_f7cf7a80e06fbb": {
+      "agent_id": {
+        "tool": "deepseekharness",
+        "id": "session-4ad009c9-a59f-4e23-8848-101a04f7189e",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "Yi Ding <98372789+KatouMegumii@users.noreply.github.com>"
+    }
+  }
+}
