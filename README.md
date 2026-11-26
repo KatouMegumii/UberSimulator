@@ -32,20 +32,28 @@ open dist/桥西夜班/index.html
 
 **https://katoumegumii.github.io/UberSimulator/**
 
-线上版本不由仓库里的文件直接发布，而是由 [`.github/workflows/pages.yml`](.github/workflows/pages.yml)
-在 CI 里现场跑 `python3 build.py`，再把 `dist/桥西夜班/` 作为 Pages 产物部署：
+同一份 `src/` 出两种产物：
+
+| 命令 | 产物 | 资源加载方式 | 用途 |
+|---|---|---|---|
+| `python3 build.py` | `dist/桥西夜班/` | base64 包进 `assets/pack/*.js`（143MB） | 压缩成 zip 发给别人，双击即玩 |
+| `python3 build.py --web` | `dist/web/` | 按 URL 直连 `assets/`（112MB），浏览器并发 + 按文件缓存 | GitHub Pages 在线玩 |
+
+网页版快在两点：省掉 base64 的 33% 膨胀，以及让浏览器对每个资源文件并发拉取、各自缓存。
+
+线上版本由 [`.github/workflows/pages.yml`](.github/workflows/pages.yml) 在 CI 里现场
+`build.py --web` 再部署 `dist/web/`，`dist/` 不进 git：
 
 ```
-push main → Actions: build.py → dist/site → upload-pages-artifact → deploy-pages
+push main → Actions: build.py --web → dist/web → upload-pages-artifact → deploy-pages
 ```
 
 所以：
 
-- `dist/` 不要提交，`.gitignore` 已排除；本地构建产物和线上不必一致。
 - **只有提交并推送的改动才会发布**，工作区里未提交的修改不会上线。
-- 只想预览本地改动：`python3 build.py && open dist/桥西夜班/index.html`。
-- 注意首屏要下载全部 `assets/pack/*.js`（约 144MB）。首次打开较慢，之后靠浏览器缓存。
-  要走"直接加载原始资源、按需下载"的轻量版，需要另做一套资源加载路径（`z_boot.html` 目前只认 `__pack`）。
+- 只想预览本地改动：`python3 build.py --web && python3 -m http.server -d dist/web 8000`。
+- 首屏要下约 112MB（模型 68MB + 贴图 21MB + HDR 15MB），第一次打开仍偏慢，之后走浏览器缓存。
+- 再往下压需要资源减重（贴图转 KTX2、模型上 Draco、HDR 降到 1k），能到 30MB 量级。
 
 ## 署名
 

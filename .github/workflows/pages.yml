@@ -26,20 +26,17 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Build dist
-        run: python3 build.py
+      - name: Build web bundle
+        run: python3 build.py --web
 
-      # 产物目录名是中文（dist/桥西夜班），改成 ASCII 再交给 Pages action，
-      # 避免 tar / artifact 环节对非 ASCII 路径的兼容问题。
       - name: Stage site
         run: |
-          mv "dist/桥西夜班" dist/site
-          ls -la dist/site
-          du -sh dist/site
+          ls -la dist/web
+          du -sh dist/web
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist/site
+          path: dist/web
 
   deploy:
     needs: build
